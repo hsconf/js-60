@@ -67,7 +67,7 @@ const Chat = () => {
                     setMessages(prevMessages => [...prevMessages, responseData]);
                     setNewMessage("");
                     setGetUrl(`http://146.185.154.90:8000/messages?datetime=${responseData.datetime}`);
-                    intervalRef.current = window.setInterval(() => fetchData(getUrl), 3000);
+                    intervalRef.current = setInterval(() => fetchData(getUrl), 3000);
                 } else {
                     console.error('Error sending message');
                 }
