@@ -1,36 +1,106 @@
 import ChatItem from "./ChatItem";
-import {useEffect, useState} from "react";
-import {Message} from "../../types";
-import './Chat.css'
+import { useEffect, useState, useRef } from "react";
+import { Message } from "../../types";
+import './Chat.css';
 
 const Chat = () => {
-    const getUrl: string = 'http://146.185.154.90:8000/messages';
-    const [message, setMessage] = useState<Message[]>([]);
+    const [getUrl, setGetUrl] = useState("http://146.185.154.90:8000/messages");
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [newMessage, setNewMessage] = useState("");
+    const [sendMessageTrigger, setSendMessageTrigger] = useState(false);
+    const intervalRef = useRef<number | null>(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            const response = await fetch(getUrl);
+    const fetchData = async (url: string) => {
+        try {
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
-                setMessage(data);
+                setMessages(prevMessages => {
+                    const updatedMessages = [...prevMessages, ...data];
+                    if (updatedMessages.length !== 0) {
+                        const lastMessage = updatedMessages[updatedMessages.length - 1];
+                        setGetUrl(`http://146.185.154.90:8000/messages?datetime=${lastMessage.datetime}`);
+                    }
+                    return updatedMessages;
+                });
             }
+        } catch (error) {
+            console.error('Error:', error);
         }
-        fetchData()
-    }, []);
+    };
 
-    console.log(message);
+    useEffect(() => {
+        fetchData(getUrl);
+        intervalRef.current = setInterval(() => fetchData(getUrl), 3000);
+
+        return () => {
+            if (intervalRef.current !== null) {
+                clearInterval(intervalRef.current);
+            }
+        };
+    }, [getUrl]);
+
+    useEffect(() => {
+        const sendMessage = async () => {
+            if (!sendMessageTrigger) return;
+            if (newMessage.trim() === "") {
+                setSendMessageTrigger(false);
+                return;
+            }
+
+            if (intervalRef.current !== null) {
+                clearInterval(intervalRef.current);
+            }
+
+            const data = new URLSearchParams();
+            data.set('message', newMessage);
+            data.set('author', 'User');
+
+            try {
+                const response = await fetch("http://146.185.154.90:8000/messages", {
+                    method: "POST",
+                    body: data
+                });
+
+                if (response.ok) {
+                    const responseData = await response.json();
+                    setMessages(prevMessages => [...prevMessages, responseData]);
+                    setNewMessage("");
+                    setGetUrl(`http://146.185.154.90:8000/messages?datetime=${responseData.datetime}`);
+                    intervalRef.current = window.setInterval(() => fetchData(getUrl), 3000);
+                } else {
+                    console.error('Error sending message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+
+            setSendMessageTrigger(false);
+        };
+
+        sendMessage();
+    }, [sendMessageTrigger]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewMessage(e.target.value);
+    };
+
+    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setSendMessageTrigger(true);
+    };
 
     return (
         <>
             <div className="chat-container">
-                {message.slice().reverse().map(item => (
-                    <ChatItem key={item.id} message={item.message} author={item.author} datetime={item.datetime} id={item.id}/>
+                {messages.slice().reverse().map(item => (
+                    <ChatItem key={item.id} message={item.message} author={item.author} datetime={item.datetime}/>
                 ))}
             </div>
             <div className="sendMessage">
-                <form>
-                    <input type="text"/>
-                    <button>
+                <form onSubmit={onSubmit}>
+                    <input type="text" value={newMessage} onChange={handleChange} placeholder="Type your message here" />
+                    <button type="submit">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                              className="bi bi-send-fill" viewBox="0 0 16 16">
                             <path
