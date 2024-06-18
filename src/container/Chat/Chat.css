@@ -1,0 +1,28 @@
+.chat-container {
+    margin: 0 auto;
+    width: 50%;
+    height: 600px;
+    border: 1px solid #000;
+    position: relative;
+    padding: 10px;
+    overflow: auto;
+}
+
+.sendMessage {
+    margin: 0 auto;
+    width: 52%;
+
+    form {
+        display: flex;
+        align-items: center;
+        input {
+            width: 100%;
+            padding: 7px;
+        }
+
+        button {
+            line-height: 50%;
+            padding: 7px;
+        }
+    }
+}
